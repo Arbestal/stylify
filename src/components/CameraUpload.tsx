@@ -42,17 +42,19 @@ export default function CameraUpload({
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={busy}
-        className="w-full rounded-xl bg-neutral-900 px-5 py-3 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full border border-ink bg-rust px-5 py-3 font-mono text-sm uppercase tracking-widest text-paper transition-colors disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {busy ? "Analyserar…" : label || "📷 Ta foto"}
+        {busy ? "Framkallar…" : label || "Ta foto"}
       </button>
       {preview && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={preview}
-          alt="Förhandsvisning"
-          className="max-h-48 rounded-lg object-cover"
-        />
+        <div className="frame-tick relative w-full overflow-hidden border border-ink/70 bg-film p-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={preview}
+            alt="Förhandsvisning"
+            className="max-h-48 w-full object-cover"
+          />
+        </div>
       )}
     </div>
   );

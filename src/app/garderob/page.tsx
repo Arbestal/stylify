@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ClothingItem } from "@/lib/db";
 import CameraUpload from "@/components/CameraUpload";
+import PhotoFrame from "@/components/PhotoFrame";
+import Tag from "@/components/Tag";
 
 const categoryLabels: Record<string, string> = {
   topp: "Topp",
@@ -19,6 +21,7 @@ export default function GarderobPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const justAddedId = useRef<string | null>(null);
 
   async function loadItems() {
     setLoading(true);
@@ -43,6 +46,7 @@ export default function GarderobPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Något gick fel");
+      justAddedId.current = data.item.id;
       setItems((prev) => [data.item, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Något gick fel");
@@ -58,53 +62,49 @@ export default function GarderobPage() {
 
   return (
     <div className="mx-auto max-w-md px-5 pt-8">
-      <h1 className="text-2xl font-bold">Garderob</h1>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-rust">
+        Katalog
+      </p>
+      <h1 className="mt-1 font-display text-4xl uppercase tracking-tight text-ink">
+        Garderob
+      </h1>
+      <p className="mt-1 text-sm text-ink-soft">
         Fota ett plagg i taget – AI:n taggar det åt dig.
       </p>
 
-      <div className="mt-5">
-        <CameraUpload onCapture={handleCapture} busy={busy} label="📷 Lägg till plagg" />
-        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      <div className="mt-6 border border-dashed border-putty p-4">
+        <CameraUpload onCapture={handleCapture} busy={busy} label="Lägg till plagg" />
+        {error && <p className="mt-2 font-mono text-xs text-rust">{error}</p>}
       </div>
 
       <div className="mt-8">
         {loading ? (
-          <p className="text-neutral-400">Laddar…</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-soft">
+            Laddar…
+          </p>
         ) : items.length === 0 ? (
-          <p className="text-neutral-400">Din garderob är tom än så länge.</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-soft">
+            Din garderob är tom än så länge.
+          </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+          <div className="grid grid-cols-2 gap-x-3 gap-y-5">
+            {items.map((item, i) => (
+              <div key={item.id}>
+                <PhotoFrame
                   src={item.imagePath}
                   alt={item.description}
-                  className="h-36 w-full object-cover"
+                  index={items.length - i}
+                  caption={item.season}
+                  onDelete={() => handleDelete(item.id)}
+                  animate={justAddedId.current === item.id}
                 />
-                <div className="p-2.5">
-                  <div className="text-xs font-semibold text-neutral-700">
-                    {categoryLabels[item.category] || item.category}
-                  </div>
-                  <div className="mt-0.5 line-clamp-2 text-xs text-neutral-500">
-                    {item.description}
-                  </div>
-                  <div className="mt-1 flex items-center justify-between">
-                    <span className="text-[10px] uppercase tracking-wide text-neutral-400">
-                      {item.season} · {item.style}
-                    </span>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="text-xs text-red-500"
-                    >
-                      Ta bort
-                    </button>
-                  </div>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <Tag tone="rust">{categoryLabels[item.category] || item.category}</Tag>
+                  <Tag tone="sage">{item.style}</Tag>
                 </div>
+                <p className="mt-1.5 line-clamp-2 text-xs text-ink-soft">
+                  {item.description}
+                </p>
               </div>
             ))}
           </div>

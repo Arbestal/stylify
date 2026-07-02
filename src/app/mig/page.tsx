@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PersonPhoto } from "@/lib/db";
 import CameraUpload from "@/components/CameraUpload";
+import PhotoFrame from "@/components/PhotoFrame";
 
 const angleOptions = [
   "Framifrån",
@@ -18,6 +19,7 @@ export default function MigPage() {
   const [busy, setBusy] = useState(false);
   const [angle, setAngle] = useState(angleOptions[0]);
   const [error, setError] = useState<string | null>(null);
+  const justAddedId = useRef<string | null>(null);
 
   async function loadPhotos() {
     setLoading(true);
@@ -42,6 +44,7 @@ export default function MigPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Något gick fel");
+      justAddedId.current = data.photo.id;
       setPhotos((prev) => [data.photo, ...prev]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Något gick fel");
@@ -57,16 +60,21 @@ export default function MigPage() {
 
   return (
     <div className="mx-auto max-w-md px-5 pt-8">
-      <h1 className="text-2xl font-bold">Mig</h1>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-rust">
+        Referensbibliotek
+      </p>
+      <h1 className="mt-1 font-display text-4xl uppercase tracking-tight text-ink">
+        Mig
+      </h1>
+      <p className="mt-1 text-sm text-ink-soft">
         Foton av dig själv i olika vinklar, som referens.
       </p>
 
-      <div className="mt-5 flex flex-col gap-3">
+      <div className="mt-6 flex flex-col gap-3 border border-dashed border-putty p-4">
         <select
           value={angle}
           onChange={(e) => setAngle(e.target.value)}
-          className="rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm"
+          className="border border-ink/30 bg-paper px-4 py-3 font-mono text-sm uppercase tracking-wide text-ink"
         >
           {angleOptions.map((opt) => (
             <option key={opt} value={opt}>
@@ -74,40 +82,32 @@ export default function MigPage() {
             </option>
           ))}
         </select>
-        <CameraUpload onCapture={handleCapture} busy={busy} label="📷 Lägg till foto" />
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        <CameraUpload onCapture={handleCapture} busy={busy} label="Lägg till foto" />
+        {error && <p className="font-mono text-xs text-rust">{error}</p>}
       </div>
 
       <div className="mt-8">
         {loading ? (
-          <p className="text-neutral-400">Laddar…</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-soft">
+            Laddar…
+          </p>
         ) : photos.length === 0 ? (
-          <p className="text-neutral-400">Inga foton tillagda än.</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-ink-soft">
+            Inga foton tillagda än.
+          </p>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {photos.map((photo) => (
-              <div
+          <div className="grid grid-cols-2 gap-x-3 gap-y-5">
+            {photos.map((photo, i) => (
+              <PhotoFrame
                 key={photo.id}
-                className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={photo.imagePath}
-                  alt={photo.angle}
-                  className="h-48 w-full object-cover"
-                />
-                <div className="flex items-center justify-between p-2.5">
-                  <span className="text-xs font-semibold text-neutral-700">
-                    {photo.angle}
-                  </span>
-                  <button
-                    onClick={() => handleDelete(photo.id)}
-                    className="text-xs text-red-500"
-                  >
-                    Ta bort
-                  </button>
-                </div>
-              </div>
+                src={photo.imagePath}
+                alt={photo.angle}
+                index={photos.length - i}
+                caption={photo.angle}
+                heightClassName="h-52"
+                onDelete={() => handleDelete(photo.id)}
+                animate={justAddedId.current === photo.id}
+              />
             ))}
           </div>
         )}
