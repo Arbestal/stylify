@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db, { ClothingItem } from "@/lib/db";
+import { getDb, ClothingItem } from "@/lib/db";
 import { deleteImage } from "@/lib/storage";
 
 export async function DELETE(
@@ -7,16 +7,18 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const item = db
-    .prepare("SELECT * FROM clothing_items WHERE id = ?")
-    .get(id) as ClothingItem | undefined;
+  const sql = await getDb();
+  const rows = (await sql`
+    SELECT * FROM clothing_items WHERE id = ${id}
+  `) as ClothingItem[];
+  const item = rows[0];
 
   if (!item) {
     return NextResponse.json({ error: "Plagget hittades inte" }, { status: 404 });
   }
 
-  db.prepare("DELETE FROM clothing_items WHERE id = ?").run(id);
-  deleteImage(item.imagePath);
+  await sql`DELETE FROM clothing_items WHERE id = ${id}`;
+  await deleteImage(item.imagePath);
 
   return NextResponse.json({ ok: true });
 }

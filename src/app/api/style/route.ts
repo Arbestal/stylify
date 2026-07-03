@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import db, { ClothingItem } from "@/lib/db";
+import { getDb, ClothingItem } from "@/lib/db";
 import { generateOutfitSuggestion } from "@/lib/anthropic";
 
 export async function POST(req: NextRequest) {
@@ -11,9 +11,10 @@ export async function POST(req: NextRequest) {
       freeform: string;
     };
 
-    const items = db
-      .prepare("SELECT * FROM clothing_items ORDER BY createdAt DESC")
-      .all() as ClothingItem[];
+    const sql = await getDb();
+    const items = (await sql`
+      SELECT * FROM clothing_items ORDER BY "createdAt" DESC
+    `) as ClothingItem[];
 
     const suggestion = await generateOutfitSuggestion(items, {
       occasion: occasion || "",

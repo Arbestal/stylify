@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import db, { ClothingItem } from "@/lib/db";
+import { getDb, ClothingItem } from "@/lib/db";
 import { saveDataUrlImage } from "@/lib/storage";
 import { classifyClothingItem } from "@/lib/anthropic";
 
 export async function GET() {
-  const items = db
-    .prepare("SELECT * FROM clothing_items ORDER BY createdAt DESC")
-    .all() as ClothingItem[];
+  const sql = await getDb();
+  const items = (await sql`
+    SELECT * FROM clothing_items ORDER BY "createdAt" DESC
+  `) as ClothingItem[];
   return NextResponse.json({ items });
 }
 
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Ingen bild skickades" }, { status: 400 });
     }
 
-    const { publicPath, base64, mediaType } = saveDataUrlImage("items", image);
+    const { publicPath, base64, mediaType } = await saveDataUrlImage("items", image);
     const classification = await classifyClothingItem(base64, mediaType);
 
     const item: ClothingItem = {
@@ -33,10 +34,11 @@ export async function POST(req: NextRequest) {
       createdAt: Date.now(),
     };
 
-    db.prepare(
-      `INSERT INTO clothing_items (id, imagePath, category, colors, season, style, description, createdAt)
-       VALUES (@id, @imagePath, @category, @colors, @season, @style, @description, @createdAt)`
-    ).run(item);
+    const sql = await getDb();
+    await sql`
+      INSERT INTO clothing_items (id, "imagePath", category, colors, season, style, description, "createdAt")
+      VALUES (${item.id}, ${item.imagePath}, ${item.category}, ${item.colors}, ${item.season}, ${item.style}, ${item.description}, ${item.createdAt})
+    `;
 
     return NextResponse.json({ item });
   } catch (err) {

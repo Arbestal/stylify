@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import db, { PersonPhoto } from "@/lib/db";
+import { getDb, PersonPhoto } from "@/lib/db";
 import { saveDataUrlImage } from "@/lib/storage";
 
 export async function GET() {
-  const photos = db
-    .prepare("SELECT * FROM person_photos ORDER BY createdAt DESC")
-    .all() as PersonPhoto[];
+  const sql = await getDb();
+  const photos = (await sql`
+    SELECT * FROM person_photos ORDER BY "createdAt" DESC
+  `) as PersonPhoto[];
   return NextResponse.json({ photos });
 }
 
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Ingen bild skickades" }, { status: 400 });
     }
 
-    const { publicPath } = saveDataUrlImage("person", image);
+    const { publicPath } = await saveDataUrlImage("person", image);
 
     const photo: PersonPhoto = {
       id: randomUUID(),
@@ -27,10 +28,11 @@ export async function POST(req: NextRequest) {
       createdAt: Date.now(),
     };
 
-    db.prepare(
-      `INSERT INTO person_photos (id, imagePath, angle, createdAt)
-       VALUES (@id, @imagePath, @angle, @createdAt)`
-    ).run(photo);
+    const sql = await getDb();
+    await sql`
+      INSERT INTO person_photos (id, "imagePath", angle, "createdAt")
+      VALUES (${photo.id}, ${photo.imagePath}, ${photo.angle}, ${photo.createdAt})
+    `;
 
     return NextResponse.json({ photo });
   } catch (err) {

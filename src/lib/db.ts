@@ -1,36 +1,43 @@
-import Database from "better-sqlite3";
-import path from "path";
-import fs from "fs";
+import { neon } from "@neondatabase/serverless";
 
-const dataDir = path.join(process.cwd(), "data");
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+function createSql() {
+  return neon(process.env.DATABASE_URL!);
 }
 
-const db = new Database(path.join(dataDir, "stilify.db"));
-db.pragma("journal_mode = WAL");
+type Sql = ReturnType<typeof createSql>;
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS clothing_items (
-    id TEXT PRIMARY KEY,
-    imagePath TEXT NOT NULL,
-    category TEXT NOT NULL,
-    colors TEXT NOT NULL,
-    season TEXT NOT NULL,
-    style TEXT NOT NULL,
-    description TEXT NOT NULL,
-    createdAt INTEGER NOT NULL
-  );
+let sql: Sql | undefined;
+let schemaReady: Promise<void> | undefined;
 
-  CREATE TABLE IF NOT EXISTS person_photos (
-    id TEXT PRIMARY KEY,
-    imagePath TEXT NOT NULL,
-    angle TEXT NOT NULL,
-    createdAt INTEGER NOT NULL
-  );
-`);
+async function ensureSchema(client: Sql) {
+  await client`
+    CREATE TABLE IF NOT EXISTS clothing_items (
+      id TEXT PRIMARY KEY,
+      "imagePath" TEXT NOT NULL,
+      category TEXT NOT NULL,
+      colors TEXT NOT NULL,
+      season TEXT NOT NULL,
+      style TEXT NOT NULL,
+      description TEXT NOT NULL,
+      "createdAt" DOUBLE PRECISION NOT NULL
+    )
+  `;
+  await client`
+    CREATE TABLE IF NOT EXISTS person_photos (
+      id TEXT PRIMARY KEY,
+      "imagePath" TEXT NOT NULL,
+      angle TEXT NOT NULL,
+      "createdAt" DOUBLE PRECISION NOT NULL
+    )
+  `;
+}
 
-export default db;
+export async function getDb(): Promise<Sql> {
+  if (!sql) sql = createSql();
+  if (!schemaReady) schemaReady = ensureSchema(sql);
+  await schemaReady;
+  return sql!;
+}
 
 export interface ClothingItem {
   id: string;

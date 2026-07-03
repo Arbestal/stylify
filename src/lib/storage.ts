@@ -1,23 +1,15 @@
-import path from "path";
-import fs from "fs";
+import { put, del } from "@vercel/blob";
 import { randomUUID } from "crypto";
 
-const uploadsRoot = path.join(process.cwd(), "public", "uploads");
-
-function ensureDir(dir: string) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
 /**
- * Saves a data URL (e.g. "data:image/jpeg;base64,...") to disk under
- * public/uploads/<subdir>/ and returns the public path plus raw base64 data.
+ * Uploads a data URL (e.g. "data:image/jpeg;base64,...") to Vercel Blob and
+ * returns its public URL plus the raw base64 payload (needed for the Claude
+ * vision call, which wants the bytes directly rather than a fetchable URL).
  */
-export function saveDataUrlImage(
+export async function saveDataUrlImage(
   subdir: "items" | "person",
   dataUrl: string
-): { publicPath: string; base64: string; mediaType: string } {
+): Promise<{ publicPath: string; base64: string; mediaType: string }> {
   const match = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
   if (!match) {
     throw new Error("Ogiltig bilddata");
@@ -26,23 +18,18 @@ export function saveDataUrlImage(
   const base64 = match[2];
   const ext = mediaType.split("/")[1] || "jpg";
 
-  const dir = path.join(uploadsRoot, subdir);
-  ensureDir(dir);
-
-  const filename = `${randomUUID()}.${ext}`;
-  const filePath = path.join(dir, filename);
-  fs.writeFileSync(filePath, Buffer.from(base64, "base64"));
+  const blob = await put(`${subdir}/${randomUUID()}.${ext}`, Buffer.from(base64, "base64"), {
+    access: "public",
+    contentType: mediaType,
+  });
 
   return {
-    publicPath: `/uploads/${subdir}/${filename}`,
+    publicPath: blob.url,
     base64,
     mediaType,
   };
 }
 
-export function deleteImage(publicPath: string) {
-  const filePath = path.join(process.cwd(), "public", publicPath);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
+export async function deleteImage(publicPath: string) {
+  await del(publicPath);
 }
