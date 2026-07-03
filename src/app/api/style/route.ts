@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { getDb, ClothingItem } from "@/lib/db";
 import { generateOutfitSuggestion } from "@/lib/anthropic";
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Ej inloggad" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { occasion, season, freeform } = body as {
       occasion: string;
@@ -13,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const sql = await getDb();
     const items = (await sql`
-      SELECT * FROM clothing_items ORDER BY "createdAt" DESC
+      SELECT * FROM clothing_items WHERE "userId" = ${userId} ORDER BY "createdAt" DESC
     `) as ClothingItem[];
 
     const suggestion = await generateOutfitSuggestion(items, {

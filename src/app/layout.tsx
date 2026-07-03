@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import InstallPrompt from "@/components/InstallPrompt";
@@ -46,16 +47,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="sv"
-      className={`${bigShoulders.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-paper text-ink">
-        <main className="flex-1 pb-24">{children}</main>
-        <InstallPrompt />
-        <ServiceWorkerRegister />
-        <Nav />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html
+        lang="sv"
+        className={`${bigShoulders.variable} ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
+      >
+        <body className="min-h-full flex flex-col bg-paper text-ink">
+          <div className="fixed right-4 top-4 z-50">
+            <UserButton />
+          </div>
+          <main className="flex-1 pb-24">{children}</main>
+          <InstallPrompt />
+          <ServiceWorkerRegister />
+          <Nav />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

@@ -1,18 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
+import { auth } from "@clerk/nextjs/server";
 import { getDb, PersonPhoto } from "@/lib/db";
 import { saveDataUrlImage } from "@/lib/storage";
 
 export async function GET() {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Ej inloggad" }, { status: 401 });
+  }
+
   const sql = await getDb();
   const photos = (await sql`
-    SELECT * FROM person_photos ORDER BY "createdAt" DESC
+    SELECT * FROM person_photos WHERE "userId" = ${userId} ORDER BY "createdAt" DESC
   `) as PersonPhoto[];
   return NextResponse.json({ photos });
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: "Ej inloggad" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { image, angle } = body as { image: string; angle: string };
     if (!image) {
@@ -23,6 +34,7 @@ export async function POST(req: NextRequest) {
 
     const photo: PersonPhoto = {
       id: randomUUID(),
+      userId,
       imagePath: publicPath,
       angle: angle || "okänd vinkel",
       createdAt: Date.now(),
@@ -30,8 +42,8 @@ export async function POST(req: NextRequest) {
 
     const sql = await getDb();
     await sql`
-      INSERT INTO person_photos (id, "imagePath", angle, "createdAt")
-      VALUES (${photo.id}, ${photo.imagePath}, ${photo.angle}, ${photo.createdAt})
+      INSERT INTO person_photos (id, "userId", "imagePath", angle, "createdAt")
+      VALUES (${photo.id}, ${photo.userId}, ${photo.imagePath}, ${photo.angle}, ${photo.createdAt})
     `;
 
     return NextResponse.json({ photo });

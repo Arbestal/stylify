@@ -30,6 +30,12 @@ async function ensureSchema(client: Sql) {
       "createdAt" DOUBLE PRECISION NOT NULL
     )
   `;
+  // Added when per-user accounts were introduced. Nullable at the DB level so
+  // this ALTER never fails against rows that predate accounts - those rows
+  // simply become invisible to everyone (no userId to match), which is the
+  // desired outcome rather than a hard migration.
+  await client`ALTER TABLE clothing_items ADD COLUMN IF NOT EXISTS "userId" TEXT`;
+  await client`ALTER TABLE person_photos ADD COLUMN IF NOT EXISTS "userId" TEXT`;
 }
 
 export async function getDb(): Promise<Sql> {
@@ -41,6 +47,7 @@ export async function getDb(): Promise<Sql> {
 
 export interface ClothingItem {
   id: string;
+  userId: string;
   imagePath: string;
   category: string;
   colors: string;
@@ -52,6 +59,7 @@ export interface ClothingItem {
 
 export interface PersonPhoto {
   id: string;
+  userId: string;
   imagePath: string;
   angle: string;
   createdAt: number;
