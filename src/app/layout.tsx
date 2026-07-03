@@ -1,7 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Big_Shoulders, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import InstallPrompt from "@/components/InstallPrompt";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 
 const bigShoulders = Big_Shoulders({
   variable: "--font-big-shoulders",
@@ -24,6 +26,18 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Stilify",
   description: "Din digitala garderob med AI-styling",
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Stilify",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#c9491d",
 };
 
 export default function RootLayout({
@@ -38,6 +52,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-paper text-ink">
         <main className="flex-1 pb-24">{children}</main>
+        <InstallPrompt />
+        <ServiceWorkerRegister />
         <Nav />
       </body>
     </html>
